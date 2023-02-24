@@ -1,0 +1,335 @@
+---
+title: "Hackathon IE6600 Sec01 Group26"
+author: "Paras Varshney, Siddharth Banyal, Yash Jaigude"
+date: "Feb 10, 2023"
+output: html_document
+---
+
+## Introduction
+
+Diabetes is a chronic illness that affects millions of individuals worldwide and is a major cause of morbidity and mortality. Diabetes still poses a significant health concern, despite improvements in medical treatment and greater knowledge of the condition. This report seeks to understand the effects of diabetes on health and the healthcare system by analyzing the health indicators related to diabetes by implementing root cause analysis.
+
+## Problem Statement
+
+The problem statement is to analyse the Health Indicators of Diabetes in the population and their impact on the Health Care System. The aim of this analysis is to investigate the relationship between various demographic and lifestyle factors such as age, sex, body mass index (BMI), education level, income grade, mental health, obesity, and their impact on the health of individuals with diabetes. The report will analyze the correlation between different health factors, the incidence of diabetes and discuss the trends inferred with the significance of the health factor.
+
+## About the Data
+
+The Diabetes Health Indicators Dataset is a collection of information that provides insight into the health status of individuals with diabetes. This dataset includes various indicators such as age, gender, body mass index (BMI), which are used to measure the prevalence and control of diabetes. The report will then investigate the effect of BMI, education level, income grade, and mental health on diabetes.
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE)
+library(readr)
+library(dplyr)
+library(data.table)
+library(tidyr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+library(RColorBrewer)
+library(RColorBrewer)
+library(readxl)
+library(ggcorrplot)
+library(treemapify)
+#install.packages("viridis")
+library(officer)
+library(rvg)
+library(gridExtra)
+
+library(tidyverse)
+library(here)
+library(glue)
+library(officer)
+library(rvg)
+library(viridis)
+```
+
+```{r 1.0, echo=FALSE, include=FALSE, warning=FALSE}
+#Data Cleaning
+# Data Loading and Cleaning
+diabetes_data<- read_csv("/Users/yashjaigude/Documents/MS NEU/IE 6600 Comp Viz/Hackathon/diabetes_012_health_indicators_BRFSS2015.csv", show_col_types = FALSE)
+
+# Shape of the Data:
+dimensions <- dim(diabetes_data)
+cat(paste("This Data Frame has", dimensions[1], "rows and", dimensions[2], "columns."))
+
+# Checking for null values:
+# colSums(is.na(diabetes_data))
+
+# Checking for duplicate rows
+# sum(duplicated(diabetes_data))
+
+# Droping the duplications in dataframe
+diabetes_data <- diabetes_data[!duplicated(diabetes_data), ]
+
+# Summary of the data
+# (summary(diabetes_data))
+
+diabetes_data$categorized_diabetes <- ifelse(diabetes_data$Diabetes_012 == 1, "Diabetic", "Non-Diabetic")
+
+patient_counts <- table(diabetes_data$categorized_diabetes)
+
+#QC to check the diabetics patients in our data
+#table(diabetes_data$categorized_diabetes)
+
+# Creating age buckets:
+diabetes_data$Age_Bucket <- ifelse(diabetes_data$Age == 1,"18-24",
+                                   ifelse(diabetes_data$Age==2, "25-29",
+                                    ifelse(diabetes_data$Age==3, "30-34",
+                                    ifelse(diabetes_data$Age==4, "35-39",
+                                    ifelse(diabetes_data$Age==5, "40-44",
+                                    ifelse(diabetes_data$Age==6, "45-49",
+                                    ifelse(diabetes_data$Age==7, "50-54",
+                                    ifelse(diabetes_data$Age==8, "55-59",
+                                    ifelse(diabetes_data$Age==9, "60-64",
+                                    ifelse(diabetes_data$Age==10, "65-69",
+                                    ifelse(diabetes_data$Age==11, "70-74",
+                                    ifelse(diabetes_data$Age==12, "75-79","80+"
+                                          ))))))))))))
+
+# Checking the Diabetics Patients across the age buckets:
+# table(diabetes_data$Age_Bucket[diabetes_data$Diabetes_012 == 1])
+
+# Create a table of the frequency of Age_Bucket for those with diabetes (Diabetes_012 == 1)
+diabetes_counts <- table(diabetes_data$Age_Bucket[diabetes_data$Diabetes_012 == 1])
+
+# Convert the table to a data frame
+diabetes_counts_df <- data.frame(Age_Bucket = names(diabetes_counts), Count = diabetes_counts)
+
+head(diabetes_data)
+
+```
+
+## Section 1: Effect of Demographic Indicators on diabetes
+
+#### Q1: High level overview of deaths of diabetics patients over the years?
+
+
+
+Diabetes is a leading cause of several serious health conditions, such as heart disease, stroke, and kidney disease, which can lead to death. In addition, poor management of diabetes can also increase the risk of complications and death. The rise in the number of deaths caused by diabetes is a result of a combination of factors, including an aging population, increasing rates of obesity and sedentary lifestyles, and a lack of access to adequate medical care for many people with diabetes.
+
+#### Q2: What percent of people are diabetic among the population survey?
+
+```{r 1.2, echo=FALSE}
+# plotting the pie chart with the unbalanced data of diabetic and non-diabetic patients
+
+ggplot(data.frame(patient_counts), aes(x = "", y = Freq, fill = Var1)) + 
+  geom_bar(width = 1, stat = "identity") + 
+  coord_polar("y", start = 0) + 
+  ggtitle("Distribution of Diabetes Status") + 
+  scale_fill_brewer(palette = "Set3") + 
+  theme_void() + 
+  labs(fill = "Diabetes Status") + 
+  geom_text(aes(label = paste0(round(100 * Freq / sum(Freq)), "%")), position = position_stack(vjust = 0.5))
+
+```
+
+The pie chart compares the population's prevalence of diabetes by depicting the frequency of patients with and without the diabetes. Within the data set, there are 2% diabetic people from the total population surveyed.
+
+#### Q3: What is the distribution of diabetics individuals by sex and age group?
+
+```{r 1.3, echo=FALSE}
+
+# plotting the grouped bar charts for each age groups segregated by sex showing percentage population which is diabetic
+diabetes_data$Sex <- ifelse(diabetes_data$Sex == 1,"Male","Female") 
+ggplot(diabetes_data, aes(x = Age_Bucket, y = ..count../sum(..count..), fill = Sex)) +
+  geom_bar(stat = "count", position = "dodge") +
+  ggtitle("Plot 2: Age Bucket vs Sex") +
+  xlab("Age Bucket") +
+  ylab("Proportion of Patients with Diabetes") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = c("deeppink","#0072B2"))
+
+```
+
+In conclusion, the grouped bar plot provides strong evidence that female populations are at a greater risk of developing diabetes compared to their male counterparts. This disparity can be observed across various age groups, reinforcing the idea that women are more susceptible to the disease. This information highlights the need for tailored medical interventions and public health measures aimed at addressing this growing health concern for women.
+
+## Section 2: Realtionship between BMI and Diabetes
+
+#### Q1: What is the spread of Body Mass Index across gender the Sex and obesity?
+
+```{r 2.1, warning=FALSE, echo=FALSE}
+# Effect of BMI on having diabetes for male and female sex
+
+ggplot(diabetes_data, aes(x = Sex, y = BMI, fill=Sex)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("blue", "deeppink")) +
+  ggtitle("Plot 1: Box Plot for Gender based BMI Values") + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlab("Sex") +
+  ylab("BMI Values")
+```
+
+The results of the survey on Body Mass Index (BMI) show that the median BMI is around 27, with 25% of the population having a BMI within the range of 12.5 to 24, which includes both underweight and normal weight individuals. 50% of the BMI distribution is within the range of 24 to 31, which is considered overweight. Lastly, 25% of the surveyed population is classified as obese, with a BMI above 31. This highlights the need for continued efforts to address the issue of obesity and promote healthy weight habits in the population.
+
+#### Q2: What is the distribution between Obesity of the surveyed population and diabetic patients?
+
+```{r 2.2, echo=FALSE}
+##Diabetes weight class creating categories
+diabetes_data$Weight_Category <- ifelse(diabetes_data$BMI < 18.5,"Under Weight",
+                                   ifelse(diabetes_data$BMI >= 18.5 & diabetes_data$BMI < 25,"Normal Weight",
+                                          ifelse(diabetes_data$BMI >= 25 & diabetes_data$BMI < 30,"Over Weight",
+                                                 ifelse(diabetes_data$BMI >= 30 & diabetes_data$BMI < 35,"Obese I",
+                                                        ifelse(diabetes_data$BMI >= 35 & diabetes_data$BMI < 40,"Obese II", "Obese III")))))
+
+# filtering the useful columns
+diabetes_filtered<-filter(diabetes_data,Diabetes_012==1)
+
+# grouping data by weight cetegory and taking count of all values
+agg_tbl_BMI <- diabetes_filtered %>% group_by(categorized_diabetes, Weight_Category) %>% 
+  summarise(count=n(), .groups = "drop")
+
+
+# plotting the bar charts for the above weight categories with the count
+ggplot(data = agg_tbl_BMI, aes(x = categorized_diabetes, 
+                           y = count, 
+                           fill = Weight_Category)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  ggtitle("Plot 2: Diabetes Status by BMI") + 
+  xlab("Diabetes Patients") + 
+  ylab("Count") + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_fill_brewer(palette = "Set3")
+
+```
+
+The above graph clearly demonstrates the relationship between overweight, obesity and the increased risk of developing diabetes. This highlights the importance of maintaining a healthy weight and BMI as a crucial aspect of overall health and well-being. By adopting healthy lifestyle habits, such as regular exercise and a balanced diet, individuals can reduce their risk of obesity and the associated health problems, including diabetes.
+
+## Section 3: Mental Health Indicators
+
+#### Q1: Is there a difference in General Health for Diabetics Patients and Non Diabetics Patients
+
+```{r 3.1, warning = FALSE,echo=FALSE}
+# creating the gen health basket column with the categories as classes
+diabetes_data$GenHBucket <- ifelse(diabetes_data$GenHlth == 1,"Excellent",
+                                   ifelse(diabetes_data$GenHlth==2, "Very Good",
+                                          ifelse(diabetes_data$GenHlth==3, "Good",
+                                                 ifelse(diabetes_data$GenHlth==4, "Fair",
+                                                        ifelse(diabetes_data$GenHlth==5, "Poor", "")))))
+
+# filtering the useful columnns and applying grouping and count
+diab_temp <- diabetes_data %>% filter(Diabetes_012 == 1) %>% group_by(GenHBucket) %>% summarise(total_value=n())
+non_diab_temp <- diabetes_data %>% filter(Diabetes_012 == 0) %>% group_by(GenHBucket) %>% summarise(total_value=n())
+
+# plotting the treemaps for general health comparision for diabetic and non-diabetic patients
+ggplot(diab_temp, aes(area=total_value, label=GenHBucket, fill=GenHBucket)) +
+  geom_treemap() +
+  ggtitle("Plot 1: General health of Diabetic Patients") +
+  geom_treemap_text(fontface = "italic", colour = "white", place = "centre", grow = FALSE) + 
+  guides(fill=guide_legend(title="General Health Class"))
+
+ggplot(non_diab_temp, aes(area=total_value, label=GenHBucket, fill=GenHBucket)) +
+  geom_treemap() +
+  ggtitle("Plot 2: General health of Non Diabetic Patients") +
+  geom_treemap_text(fontface = "italic", colour = "white", place = "centre", grow = FALSE) + 
+  guides(fill=guide_legend(title="General Health Class"))
+```
+
+The tree map analysis in the study of diabetic patients shows that the overall health of non-diabetic individuals is in a better state compared to diabetic patients. This observation highlights the significant impact of diabetes on an individual's health and highlights the need for proper management and control of the condition to maintain good health. The findings from this analysis can also be used to design appropriate interventions and programs aimed at improving the health of diabetic individuals and reducing the health disparities between diabetics and non-diabetic individuals.
+
+#### Q2: How education level affects the mental health of the population?
+
+```{r 3.2,echo=FALSE}
+# creating the education health basket column with the categories as classes
+diabetes_data$Education_Bucket <- ifelse(diabetes_data$Education == 1,"Never attended school",
+                                   ifelse(diabetes_data$Education==2, "Elementary",
+                                          ifelse(diabetes_data$Education==3, "Junior High School",
+                                                 ifelse(diabetes_data$Education==4, "Senior High School",
+                                                        ifelse(diabetes_data$Education==5, "Undergrad Degree", "Magister")))))
+
+# filtering, grouping and taking mean for the data
+edu_mth <- diabetes_data %>% 
+  select(Education_Bucket,MentHlth) %>% 
+  group_by(Education_Bucket) %>% 
+  summarise(avg_mHth_idx = round(mean(MentHlth), 1))
+
+# adding pallet and plotting the horizontal bar chart with the mean values calculated above
+palette <- c("#00AFBB", "#E7B800", "#FC4E07", "#60AFBB", "#AAB800", "#124E07")
+ggplot(edu_mth, aes(x = reorder(Education_Bucket, avg_mHth_idx), y = avg_mHth_idx, fill=palette)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  ggtitle("Plot 2: Relation of Education Level with Mental Health") +
+  xlab("Education Level") +
+  ylab("Average mental Health Index") +
+  scale_fill_brewer(palette = "Set3") +
+  theme(legend.position="none", plot.title = element_text(hjust = 0.5)) +
+  coord_flip() + geom_text(aes(label = avg_mHth_idx), size = 3, hjust = 1.5, vjust = 0.7, position ="stack")
+
+```
+
+People who never attended school has highest average mental health index of 6.6 suggests a potential link between illiteracy and poor mental health. It indicates that people who are illiterate have higher mental health problems. Education results in increased knowledge, a more stable financial situation and understanding of mental health, as well as provide access to resources for maintaining and improving mental health.
+
+#### Q3: What is the relationship between mental and physical health of the diabetic patients?
+
+```{r 3.3,echo=FALSE}
+# setting seeed to always get the same sample and sample 200 points to demonstrate the density plot correlation
+set.seed(13)
+ggplot(sample_n(diabetes_data, 200), aes(x=x) ) +
+  # Top density plot
+  geom_density( aes(x = MentHlth, y = ..density..), fill="#69b3a2" ) +
+  geom_label( aes(x=4.5, y=0.25, label="Mental Health"), color="#69b3a2") +
+  # Bottom density plot
+  geom_density( aes(x = PhysHlth, y = -..density..), fill= "#404080") +
+  geom_label( aes(x=4.5, y=-0.25, label="Physical Health"), color="#404080") +
+  theme_classic() +
+  xlab("Health Index Value")+scale_fill_brewer(palette = "Set3") +
+  ggtitle("Plot 3: Density Plot Mental vs Physical Health")
+```
+
+The density plot provides a balanced representation of the distribution of mental and physical health, interpreting that mental and physical health both are changed at same time. The plot highlights the importance of considering both mental and physical health in our daily lives because both are dependent on each other.
+
+#### Q4: What is the Physical and mental Health across the Genders
+
+```{r 3.4,echo=FALSE}
+# creating the gen health basket column with the categories as classes
+
+diabetes_data$GenHBucket <- ifelse(diabetes_data$GenHlth == 1,"Excellent",
+                                   ifelse(diabetes_data$GenHlth==2, "Very Good",
+                                          ifelse(diabetes_data$GenHlth==3, "Good",
+                                                 ifelse(diabetes_data$GenHlth==4, "Fair",
+                                                        ifelse(diabetes_data$GenHlth==5, "Poor", "")))))
+
+# Violin Plot for Mental Health
+ggplot(diabetes_data, aes(x=Sex, y=MentHlth, fill=Sex)) + 
+  geom_violin() +
+  ylab("Mental Health") +
+  ggtitle("Plot 4: Relation of Mental Health with Sex") +
+  xlab("Sex") +
+  theme(legend.position="none", plot.title = element_text(hjust = 0.5))
+
+
+# Violin Plot for Physical Health
+ggplot(diabetes_data, aes(x=Sex, y=PhysHlth, fill=Sex)) + 
+  geom_violin() +
+  ylab("Physical Health") +
+  ggtitle("Plot 5: Relation of Physical Health with Sex") +
+  theme(legend.position="none", plot.title = element_text(hjust = 0.5))
+```
+
+The distribution of physical health is visible for both males and females in the physical health violin plot. Both men and women experience changes in their physical health at the same period. However, contrast to females, who consistently experience bumps in the violin plot, males have better mental health. This reinforces the finding that one of the causes of diabetes in females may be poor mental health.
+
+#### Q5: Does higher income results in more mental stress?
+
+```{r 3.5,echo=FALSE, warning=FALSE}
+# selecting the useful columns and then grouping by mental health and income and then taking mean
+inc_mth <- diabetes_data %>% 
+  select(MentHlth, Income) %>% 
+  group_by(MentHlth) %>% 
+  summarise(avg_income_scale = mean(Income))
+
+# plotting the scatter and lm line plot with the defined parameters
+ggplot(inc_mth, aes(x = MentHlth, y = avg_income_scale)) +
+  geom_point(stat = "identity", size = 3) +
+  geom_smooth(method = "lm", color = "#DDA0DD", formula = y ~ x) +
+  ggtitle("Plot 6: Relation of Mental Health with Income Grade") +
+  xlab("Mental Health Index") +
+  ylab("Average Income Grade") +
+  scale_color_brewer(palette = "Set1") +
+  theme(legend.position="none")
+```
+
+The increased levels of stress and trauma that come with living in poverty and facing financial insecurity justify the inverse relationship of income grade and mental health . People with lower income may also have limited access to quality mental health services and support.
+
+## Conclusion:
+
+In conclusion, various demographic factors such as age, sex, education level, income, body mass index (BMI), and obesity have been shown to have a significant impact on the risk and outcomes of diabetes. The correlation between these health factors and diabetes highlights the complex and interrelated nature of the disease, which requires a multi-faceted approach to prevention and management. Additionally, the connection between mental health and diabetes highlights the importance of addressing both physical and psychological factors in the care of individuals with diabetes. These findings emphasize the need for comprehensive and equitable health policies.Diabetes is the most common form and its prevalence varies by various parameters like age, education, income, location, race, and other social determinants of health. Much of the burden of the disease falls on those of lower socioeconomic status as well. Diabetes also places a massive burden on the economy.
